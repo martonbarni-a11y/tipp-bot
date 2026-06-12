@@ -1,6 +1,11 @@
 require('dotenv').config();
 const { Client, GatewayIntentBits } = require('discord.js');
+const express = require('express');
 const { schedulePolls } = require('./scheduler');
+
+const app = express();
+app.get('/', (_req, res) => res.send('OK'));
+app.listen(process.env.PORT || 3000);
 
 const requiredEnvVars = ['DISCORD_BOT_TOKEN', 'API_FOOTBALL_KEY', 'DISCORD_CHANNEL_ID'];
 for (const key of requiredEnvVars) {
