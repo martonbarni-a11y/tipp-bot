@@ -5,13 +5,151 @@ const TIMEZONE = process.env.TIMEZONE || 'Europe/Budapest';
 const POST_TIME = process.env.POST_TIME || '0 8 * * *';
 const POST_NO_MATCHES = process.env.POST_NO_MATCHES === 'true';
 
-// Discord poll: min 1 hour, max 168 hours (7 days). Cap at 32 per spec.
 const POLL_MIN_HOURS = 1;
 const POLL_MAX_HOURS = 32;
 
+// Team name → flag emoji for all FIFA World Cup 2026 participants (48 teams).
+// Names match what API-Football returns for international fixtures.
+// Subdivision flags (England, Scotland, Wales) use Unicode tag sequences.
+const TEAM_FLAGS = {
+  // CONMEBOL
+  'Argentina':        '🇦🇷',
+  'Brazil':           '🇧🇷',
+  'Colombia':         '🇨🇴',
+  'Uruguay':          '🇺🇾',
+  'Ecuador':          '🇪🇨',
+  'Venezuela':        '🇻🇪',
+  'Paraguay':         '🇵🇾',
+  'Chile':            '🇨🇱',
+  'Peru':             '🇵🇪',
+  'Bolivia':          '🇧🇴',
+
+  // CONCACAF
+  'United States':    '🇺🇸',
+  'USA':              '🇺🇸',  // API-Football alias
+  'Canada':           '🇨🇦',
+  'Mexico':           '🇲🇽',
+  'Panama':           '🇵🇦',
+  'Honduras':         '🇭🇳',
+  'Costa Rica':       '🇨🇷',
+  'Jamaica':          '🇯🇲',
+  'El Salvador':      '🇸🇻',
+  'Guatemala':        '🇬🇹',
+  'Haiti':            '🇭🇹',
+  'Trinidad & Tobago':'🇹🇹',
+  'Trinidad and Tobago':'🇹🇹',
+
+  // UEFA
+  'France':           '🇫🇷',
+  'Germany':          '🇩🇪',
+  'Spain':            '🇪🇸',
+  'England':          '🏴󠁧󠁢󠁥󠁮󠁧󁿢',
+  'Portugal':         '🇵🇹',
+  'Netherlands':      '🇳🇱',
+  'Belgium':          '🇧🇪',
+  'Italy':            '🇮🇹',
+  'Switzerland':      '🇨🇭',
+  'Croatia':          '🇭🇷',
+  'Denmark':          '🇩🇰',
+  'Poland':           '🇵🇱',
+  'Serbia':           '🇷🇸',
+  'Austria':          '🇦🇹',
+  'Scotland':         '🏴󠁧󠁢󠁳󠁣󠁴󁿢',
+  'Wales':            '🏴󠁧󠁢󠁷󠁬󠁳󁿢',
+  'Sweden':           '🇸🇪',
+  'Norway':           '🇳🇴',
+  'Czech Republic':   '🇨🇿',
+  'Czechia':          '🇨🇿',
+  'Hungary':          '🇭🇺',
+  'Romania':          '🇷🇴',
+  'Slovakia':         '🇸🇰',
+  'Slovenia':         '🇸🇮',
+  'Ukraine':          '🇺🇦',
+  'Turkey':           '🇹🇷',
+  'Türkiye':          '🇹🇷',
+  'Greece':           '🇬🇷',
+  'Albania':          '🇦🇱',
+  'Iceland':          '🇮🇸',
+  'Ireland':          '🇮🇪',
+  'Finland':          '🇫🇮',
+  'North Macedonia':  '🇲🇰',
+  'Bosnia':           '🇧🇦',
+  'Bosnia and Herzegovina': '🇧🇦',
+  'Kosovo':           '🇽🇰',
+  'Montenegro':       '🇲🇪',
+  'Georgia':          '🇬🇪',
+
+  // CAF
+  'Morocco':          '🇲🇦',
+  'Senegal':          '🇸🇳',
+  'Nigeria':          '🇳🇬',
+  'Cameroon':         '🇨🇲',
+  'Egypt':            '🇪🇬',
+  'Ghana':            '🇬🇭',
+  "Côte d'Ivoire":    '🇨🇮',
+  "Cote d'Ivoire":    '🇨🇮',
+  'Ivory Coast':      '🇨🇮',
+  'South Africa':     '🇿🇦',
+  'DR Congo':         '🇨🇩',
+  'Congo DR':         '🇨🇩',
+  'Algeria':          '🇩🇿',
+  'Tunisia':          '🇹🇳',
+  'Mali':             '🇲🇱',
+  'Zambia':           '🇿🇲',
+  'Uganda':           '🇺🇬',
+  'Tanzania':         '🇹🇿',
+  'Zimbabwe':         '🇿🇼',
+  'Cape Verde':       '🇨🇻',
+  'Burkina Faso':     '🇧🇫',
+  'Guinea':           '🇬🇳',
+  'Mozambique':       '🇲🇿',
+  'Angola':           '🇦🇴',
+  'Comoros':          '🇰🇲',
+
+  // AFC
+  'Japan':            '🇯🇵',
+  'South Korea':      '🇰🇷',
+  'Korea Republic':   '🇰🇷',  // API-Football alias
+  'Australia':        '🇦🇺',
+  'Saudi Arabia':     '🇸🇦',
+  'Iran':             '🇮🇷',
+  'Qatar':            '🇶🇦',
+  'Indonesia':        '🇮🇩',
+  'Jordan':           '🇯🇴',
+  'Uzbekistan':       '🇺🇿',
+  'Iraq':             '🇮🇶',
+  'China':            '🇨🇳',
+  'China PR':         '🇨🇳',
+  'Oman':             '🇴🇲',
+  'Bahrain':          '🇧🇭',
+  'United Arab Emirates': '🇦🇪',
+  'UAE':              '🇦🇪',
+  'Palestine':        '🇵🇸',
+  'Kyrgyzstan':       '🇰🇬',
+  'Tajikistan':       '🇹🇯',
+
+  // OFC
+  'New Zealand':      '🇳🇿',
+  'Fiji':             '🇫🇯',
+  'Papua New Guinea': '🇵🇬',
+  'Solomon Islands':  '🇸🇧',
+  'Vanuatu':          '🇻🇺',
+  'Tahiti':           '🇵🇫',
+};
+
 /**
- * Returns today's date as YYYY-MM-DD in the configured timezone.
+ * Looks up a flag emoji for a team name.
+ * Falls back to 🏳️ and logs a warning for unmapped teams.
  */
+function getTeamFlag(teamName) {
+  const flag = TEAM_FLAGS[teamName];
+  if (!flag) {
+    console.warn(`  ⚠ No flag mapping for team: "${teamName}" — using fallback 🏳️`);
+    return '🏳️';
+  }
+  return flag;
+}
+
 function getTodayString() {
   return new Intl.DateTimeFormat('en-CA', {
     timeZone: TIMEZONE,
@@ -21,9 +159,6 @@ function getTodayString() {
   }).format(new Date());
 }
 
-/**
- * Formats a UTC fixture date to HH:MM in CET/CEST (Europe/Budapest).
- */
 function formatKickoffTime(fixtureDate) {
   return new Date(fixtureDate).toLocaleTimeString('en-GB', {
     timeZone: TIMEZONE,
@@ -34,17 +169,25 @@ function formatKickoffTime(fixtureDate) {
 }
 
 /**
- * Calculates poll duration in hours from now until kickoff, clamped to valid range.
+ * Calculates poll duration in hours (rounded to nearest hour) so the poll
+ * closes as close as possible to kickoff. Warns if kickoff is beyond the
+ * 32-hour Discord cap and the poll will remain open past kick-off.
  */
-function getPollDurationHours(fixtureDate) {
+function getPollDurationHours(fixtureDate, matchLabel) {
   const msUntilKickoff = new Date(fixtureDate) - Date.now();
-  const hours = Math.floor(msUntilKickoff / (1000 * 60 * 60));
-  return Math.min(Math.max(hours, POLL_MIN_HOURS), POLL_MAX_HOURS);
+  const hoursExact = msUntilKickoff / (1000 * 60 * 60);
+  const hours = Math.round(hoursExact);
+
+  if (hours > POLL_MAX_HOURS) {
+    console.warn(
+      `  ⚠ "${matchLabel}" kicks off in ~${hours}h — poll capped at ${POLL_MAX_HOURS}h and will stay open past kickoff.`
+    );
+    return POLL_MAX_HOURS;
+  }
+
+  return Math.max(hours, POLL_MIN_HOURS);
 }
 
-/**
- * Fetches today's matches and posts a native Discord poll for each one.
- */
 async function createTodaysPolls(client) {
   const channelId = process.env.DISCORD_CHANNEL_ID;
 
@@ -82,28 +225,31 @@ async function createTodaysPolls(client) {
     const homeTeam = match.teams.home.name;
     const awayTeam = match.teams.away.name;
     const kickoffDate = match.fixture.date;
+    const homeFlag = getTeamFlag(homeTeam);
+    const awayFlag = getTeamFlag(awayTeam);
     const kickoffTime = formatKickoffTime(kickoffDate);
-    const duration = getPollDurationHours(kickoffDate);
+    const matchLabel = `${homeTeam} vs ${awayTeam}`;
+    const duration = getPollDurationHours(kickoffDate, matchLabel);
 
-    // Truncate team names to fit Discord's 55-char poll question limit
-    const question = `Who wins? ${homeTeam} vs ${awayTeam} (${kickoffTime} CET)`.slice(0, 300);
+    // Poll question: "Poland 🇵🇱 vs Canada 🇨🇦 (21:00 CET)"
+    const question = `${homeTeam} ${homeFlag} vs ${awayTeam} ${awayFlag} (${kickoffTime} CET)`.slice(0, 300);
 
     try {
       await channel.send({
         poll: {
           question: { text: question },
           answers: [
-            { text: homeTeam.slice(0, 55), emoji: { name: '🏠' } },
-            { text: awayTeam.slice(0, 55), emoji: { name: '✈️' } },
-            { text: 'Draw', emoji: { name: '🤝' } },
+            { text: `${homeTeam} ${homeFlag}`.slice(0, 55) },
+            { text: `${awayTeam} ${awayFlag}`.slice(0, 55) },
+            { text: 'X ❌' },
           ],
           duration,
           allowMultiselect: false,
         },
       });
-      console.log(`  ✓ Poll created: ${homeTeam} vs ${awayTeam} (${kickoffTime} CET) — ${duration}h duration`);
+      console.log(`  ✓ Poll created: ${question} — ${duration}h`);
     } catch (err) {
-      console.error(`  ✗ Failed to create poll for ${homeTeam} vs ${awayTeam}:`, err.message);
+      console.error(`  ✗ Failed to create poll for ${matchLabel}:`, err.message);
     }
 
     // Brief pause between posts to respect Discord rate limits
@@ -111,9 +257,6 @@ async function createTodaysPolls(client) {
   }
 }
 
-/**
- * Registers the cron job and attaches it to the Discord client.
- */
 function schedulePolls(client) {
   if (!cron.validate(POST_TIME)) {
     console.error(`Invalid POST_TIME cron expression: "${POST_TIME}". Falling back to "0 8 * * *".`);
@@ -125,7 +268,7 @@ function schedulePolls(client) {
   cron.schedule(
     POST_TIME,
     () => {
-      console.log('Cron triggered — creating today\'s polls...');
+      console.log("Cron triggered — creating today's polls...");
       createTodaysPolls(client).catch((err) =>
         console.error('Unexpected error in createTodaysPolls:', err)
       );
