@@ -225,22 +225,19 @@ async function createTodaysPolls(client) {
     const homeTeam = match.teams.home.name;
     const awayTeam = match.teams.away.name;
     const kickoffDate = match.fixture.date;
-    const homeFlag = getTeamFlag(homeTeam);
-    const awayFlag = getTeamFlag(awayTeam);
     const kickoffTime = formatKickoffTime(kickoffDate);
     const matchLabel = `${homeTeam} vs ${awayTeam}`;
     const duration = getPollDurationHours(kickoffDate, matchLabel);
 
-    // Poll question: "Poland 🇵🇱 vs Canada 🇨🇦 (21:00 CET)"
-    const question = `${homeTeam} ${homeFlag} vs ${awayTeam} ${awayFlag} (${kickoffTime} CET)`.slice(0, 300);
+    const question = `${homeTeam} vs ${awayTeam} (${kickoffTime} CET)`.slice(0, 300);
 
     try {
       await channel.send({
         poll: {
           question: { text: question },
           answers: [
-            { text: `${homeTeam} ${homeFlag}`.slice(0, 55) },
-            { text: `${awayTeam} ${awayFlag}`.slice(0, 55) },
+            { text: homeTeam.slice(0, 55) },
+            { text: awayTeam.slice(0, 55) },
             { text: 'X ❌' },
           ],
           duration,
