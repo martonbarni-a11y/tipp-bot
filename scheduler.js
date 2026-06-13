@@ -1,4 +1,5 @@
 const cron = require('node-cron');
+const { DateTime } = require('luxon');
 const { getMatchesForDate } = require('./api');
 
 const TIMEZONE = process.env.TIMEZONE || 'Europe/Budapest';
@@ -159,13 +160,15 @@ function getTodayString() {
   }).format(new Date());
 }
 
+/**
+ * Converts a UTC ISO kickoff timestamp to HH:MM in the configured timezone
+ * (Europe/Budapest by default). luxon uses the full IANA tz database, so
+ * CEST (UTC+2) vs CET (UTC+1) is handled automatically.
+ */
 function formatKickoffTime(fixtureDate) {
-  return new Date(fixtureDate).toLocaleTimeString('en-GB', {
-    timeZone: TIMEZONE,
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  });
+  return DateTime.fromISO(fixtureDate, { zone: 'UTC' })
+    .setZone(TIMEZONE)
+    .toFormat('HH:mm');
 }
 
 /**

@@ -1,10 +1,10 @@
 const axios = require('axios');
+const { DateTime } = require('luxon');
 
 const SCHEDULE_URL =
   'https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.json';
 
 // Module-level cache for the duration of a single process run.
-// Keyed by date string so the same fetch is reused if called multiple times.
 let _cache = null;
 
 async function fetchSchedule() {
@@ -15,9 +15,15 @@ async function fetchSchedule() {
 }
 
 /**
- * Parses an openfootball time string into a UTC ISO timestamp.
+ * Parses an openfootball time string into a UTC ISO timestamp using luxon.
  *
  * Format: "HH:MM UTC±N"  e.g. "13:00 UTC-6", "20:00 UTC+2", "18:00 UTC"
+ *
+ * The UTC offset in the openfootball JSON is already DST-adjusted for each
+ * host city (e.g. UTC-5 for CDT cities, UTC-6 for MDT cities and Mexico City
+ * which abolished DST in 2023). Luxon's FixedOffsetZone preserves that
+ * intent exactly, then .toUTC() gives us the unambiguous UTC instant.
+ *
  * Returns null for TBD or unrecognised formats.
  */
 function parseKickoffUTC(date, timeStr) {
@@ -29,14 +35,19 @@ function parseKickoffUTC(date, timeStr) {
     return null;
   }
 
-  const localH = parseInt(m[1], 10);
-  const localM = parseInt(m[2], 10);
-  const offsetH = m[3] ? parseInt(m[3], 10) : 0;
+  const hh = m[1].padStart(2, '0');
+  const mm = m[2];
+  // luxon accepts "UTC-6", "UTC+2", "UTC" as fixed-offset zone names
+  const zone = m[3] ? `UTC${m[3]}` : 'UTC';
 
-  // UTC = local − offset  (e.g. "13:00 UTC-6" → 13 − (−6) = 19:00 UTC)
-  const d = new Date(`${date}T00:00:00Z`);
-  d.setUTCHours(localH - offsetH, localM, 0, 0);
-  return d.toISOString();
+  const dt = DateTime.fromISO(`${date}T${hh}:${mm}:00`, { zone });
+
+  if (!dt.isValid) {
+    console.warn(`  ⚠ luxon could not parse "${timeStr}": ${dt.invalidExplanation}`);
+    return null;
+  }
+
+  return dt.toUTC().toISO();
 }
 
 /**
